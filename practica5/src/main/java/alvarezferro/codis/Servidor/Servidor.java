@@ -11,10 +11,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import alvarezferro.codis.API.CallbackHandlerInterface;
 import alvarezferro.codis.Cliente.Cliente;
 import alvarezferro.codis.API.Red;
-import alvarezferro.codis.API.SignUpHandlerInterface;
 
 public class Servidor {
 
@@ -37,7 +35,6 @@ public class Servidor {
             freeResources();
             return;
         }
-
 
 
         Scanner entrada = new Scanner(System.in);

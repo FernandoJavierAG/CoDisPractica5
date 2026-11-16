@@ -51,7 +51,9 @@ public class Cliente {
         try {
             Object ref = registroRMI.lookup(Red.NAME_SERVIDOR_OBJ);
 
-            if(! (ref instanceof SignUpHandlerInterface))
+            if(! (ref instanceof SignUpHandlerInterface) ) {
+                throw new IllegalArgumentException("Objeto servidor es de la clase "+ref.getClass());
+            }
 
         } catch (RemoteException | NotBoundException | IllegalArgumentException err) {
             JOptionPane.showMessageDialog(null,
