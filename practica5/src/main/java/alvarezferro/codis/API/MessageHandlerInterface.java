@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 
 public interface MessageHandlerInterface extends Remote {
 
+
     public void enviarMensaje(String mensaje) throws RemoteException;
 
 }

@@ -12,7 +12,9 @@ import java.util.Scanner;
 import java.util.Set;
 
 import alvarezferro.codis.Cliente.Cliente;
+import alvarezferro.codis.API.MessageHandlerInterface;
 import alvarezferro.codis.API.Red;
+import alvarezferro.codis.API.Usuario;
 
 public class Servidor {
 
@@ -82,10 +84,19 @@ public class Servidor {
         return amigos;
     }
 
+    protected static Set<Usuario> getAmigosEnLinea(Usuario usuario) {
+        Set<Usuario> amigos = new HashSet<>();
+        
+        // Interaccion con BDD - Obtener amigos y contrastar contra HashMap Usuarios
+
+        return amigos;
+    }
+
     protected static void notificarInicioSesion(Usuario usuario) {
         for(Usuario amigo : getAmigos(usuario)) {
-            try {            
-                amigo.notificarInicioSesion(usuario.getUserName());
+            try {
+                if(Usuarios.containsValue(amigo))            
+                    amigo.notificarInicioSesion(usuario);
             } catch(RemoteException err) {
                 Cliente.logMessage("Usuario "+amigo.getUserName()+" no accesible a la hora de notificar inicio de sesion.\n");
             }
@@ -100,6 +111,8 @@ public class Servidor {
                 Cliente.logMessage("Usuario "+amigo.getUserName()+" no accesible a la hora de notificar cierre de sesion.\n");
             }
         }
+
+        Usuarios.remove(usuario.getUserName());
     }
 
     protected static int enviarSolicitudAmistad(String solicitante, String destinatario) {
@@ -123,11 +136,19 @@ public class Servidor {
         // Interaccion BDD - Registrar solicitud aceptada.
 
         Usuario usrSolicitante = Usuarios.get(solicitante);
+        Usuario usrDestinatario = Usuarios.get(destinatario);
         if(usrSolicitante != null) {
             try {
                 usrSolicitante.notificarSolicitudAceptada(destinatario);
             } catch(RemoteException err) {}
         }
+
+        try {
+        if(usrSolicitante != null)
+            usrSolicitante.notificarInicioSesion(usrDestinatario);
+        if(usrDestinatario != null)
+            usrDestinatario.notificarInicioSesion(usrSolicitante);
+        } catch(RemoteException err) {}
 
         return 0;
     }
@@ -145,6 +166,18 @@ public class Servidor {
         // Interaccion con BDD - Añadir usuario
 
         return 0;
+    }
+
+    protected static MessageHandlerInterface iniciarChat(String destinatario, String remitente) {
+        Usuario usrDestinatario = Usuarios.get(destinatario);
+        if(usrDestinatario == null)
+            return null;
+
+        try {
+            return usrDestinatario.getReferencia().iniciarChat(remitente);
+        } catch(RemoteException err) {
+            return null;
+        }
     }
 
     private static void freeResources() {

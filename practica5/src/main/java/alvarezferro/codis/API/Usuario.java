@@ -1,8 +1,6 @@
-package alvarezferro.codis.Servidor;
+package alvarezferro.codis.API;
 
 import java.rmi.RemoteException;
-
-import alvarezferro.codis.API.CallbackHandlerInterface;
 
 public class Usuario {
     private String userName;
@@ -21,7 +19,7 @@ public class Usuario {
         return referencia;
     }
 
-    public void notificarInicioSesion(String usuario) throws RemoteException {    
+    public void notificarInicioSesion(Usuario usuario) throws RemoteException {    
         referencia.notificarInicioSesion(usuario);
     }
 

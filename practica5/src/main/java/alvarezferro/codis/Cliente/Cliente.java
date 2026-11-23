@@ -1,21 +1,24 @@
 package alvarezferro.codis.Cliente;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.HashMap;
 
-import javax.security.auth.callback.Callback;
 import javax.swing.JOptionPane;
 
 import alvarezferro.codis.API.Red;
 import alvarezferro.codis.API.SignUpHandlerInterface;
+import alvarezferro.codis.API.Usuario;
+import alvarezferro.codis.Cliente.UI.InicioSesion;
 import alvarezferro.codis.Cliente.UI.VentanaPrincipal;
 
 public class Cliente {
+
+    private static HashMap<String, Usuario> amigos;
 
     private static VentanaPrincipal ventana;
     private static CallbackHandler nuestraReferencia;
@@ -32,8 +35,6 @@ public class Cliente {
                 "\t"+err.getMessage()
             );
         }
-        
-        nuestraReferencia = new CallbackHandler();
 
         Registry registroRMI;
         try {
@@ -55,19 +56,22 @@ public class Cliente {
                 throw new IllegalArgumentException("Objeto servidor es de la clase "+ref.getClass());
             }
 
+            servidor = (SignUpHandlerInterface) ref;
+
         } catch (RemoteException | NotBoundException | IllegalArgumentException err) {
             JOptionPane.showMessageDialog(null,
                 "Error al obtener el objeto servidor"+
                         "\t"+err.getMessage());
+            return;
         }
 
-
-        return;
+        amigos = new HashMap<>();
+        
+        new InicioSesion(servidor);
     }
 
-
-    public static void recibirMensaje(String remitente, String mensaje) {
-        ventana.mostrarMensaje(remitente, mensaje);
+    public void addAmigo(Usuario amigo) {
+        this.amigos.put(amigo.getUserName(), amigo);
     }
 
     public static void logMessage(String message) {
