@@ -8,10 +8,10 @@ public class VentanaChat {
 
     public VentanaChat(CallbackHandlerInterface interlocutor) {
 
-        this.interlocutor = interlocutor.iniciarChat();
-
     }
 
-
+    public void recibirMensaje(String interlocutor, String mensaje) {
+        System.out.println("Ventana: ["+interlocutor+"]:"+mensaje);
+    }
     
 }

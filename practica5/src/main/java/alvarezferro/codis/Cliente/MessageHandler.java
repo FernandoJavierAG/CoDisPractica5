@@ -6,6 +6,7 @@ import java.rmi.server.UnicastRemoteObject;
 import javax.swing.JFrame;
 
 import alvarezferro.codis.API.MessageHandlerInterface;
+import alvarezferro.codis.Cliente.UI.VentanaChat;
 
 public class MessageHandler extends UnicastRemoteObject implements MessageHandlerInterface {
 

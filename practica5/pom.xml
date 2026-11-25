@@ -13,4 +13,67 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.7</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.6.2</version>
+            <executions>
+                <execution>
+                    <id>Build-Server</id>
+                    <configuration>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                              <manifestEntries>
+                                <Main-Class>alvarezferro.codis.Servidor.Servidor</Main-Class>
+                              </manifestEntries>
+                            </transformer>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                              <resource>META-INF/cxf/bus-extensions.txt</resource>
+                            </transformer>
+                        </transformers>
+                        <finalName>Server</finalName>
+                    </configuration>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </execution>
+              
+                <execution>
+                    <id>Build-Client</id>
+                    <configuration>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                              <manifestEntries>
+                                <Main-Class>alvarezferro.codis.Cliente.Cliente</Main-Class>
+                              </manifestEntries>
+                            </transformer>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                              <resource>META-INF/cxf/bus-extensions.txt</resource>
+                            </transformer>
+                        </transformers>
+                        <finalName>Client</finalName>
+                    </configuration>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </execution>
+            </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

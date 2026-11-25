@@ -12,7 +12,7 @@ import alvarezferro.codis.Cliente.UI.VentanaPrincipal;
 public class CallbackHandler extends UnicastRemoteObject implements CallbackHandlerInterface {
     VentanaPrincipal ventanaPrincipal;
 
-    protected void setVentanaPrincipal(VentanaPrincipal ventanaPrincipal) {
+    public void setVentanaPrincipal(VentanaPrincipal ventanaPrincipal) {
         this.ventanaPrincipal = ventanaPrincipal;
     }
 
@@ -27,7 +27,9 @@ public class CallbackHandler extends UnicastRemoteObject implements CallbackHand
     }
 
     public void notificarCierreSesion(String usuario) {
+        Cliente.removeAmigo(usuario);
 
+        ventanaPrincipal.notificarCierreSesion(usuario);
     }
 
     public void notificarSolicitudAmistad(String usuario) {

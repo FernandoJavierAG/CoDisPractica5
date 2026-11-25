@@ -9,8 +9,8 @@ public interface SignUpHandlerInterface extends Remote {
 
     public int inscribirCliente(String userName, String password) throws RemoteException;
     
-    public int enviarSolicitudAmistad(String userName, String password, String destinatario);
+    public int enviarSolicitudAmistad(String userName, String password, String destinatario) throws RemoteException;
 
-    public int aceptarSolicitudAmistad(String userName, String password, String solicitante);
+    public int aceptarSolicitudAmistad(String userName, String password, String solicitante) throws RemoteException;
 
 }

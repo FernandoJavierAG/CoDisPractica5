@@ -10,6 +10,10 @@ import alvarezferro.codis.API.SignUpHandlerInterface;
 import alvarezferro.codis.API.Usuario;
 
 public class SignUpHandler extends UnicastRemoteObject implements SignUpHandlerInterface {
+
+    public SignUpHandler() throws RemoteException {
+        super();
+    }
     
     public int conectarCliente(String userName, String password, CallbackHandlerInterface cliente) {
         int codError;

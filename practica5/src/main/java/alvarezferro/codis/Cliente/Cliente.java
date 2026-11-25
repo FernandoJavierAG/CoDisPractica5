@@ -70,8 +70,12 @@ public class Cliente {
         new InicioSesion(servidor);
     }
 
-    public void addAmigo(Usuario amigo) {
-        this.amigos.put(amigo.getUserName(), amigo);
+    public static void addAmigo(Usuario amigo) {
+        amigos.put(amigo.getUserName(), amigo);
+    }
+
+    public static void removeAmigo(String amigo) {
+        amigos.remove(amigo);
     }
 
     public static void logMessage(String message) {
