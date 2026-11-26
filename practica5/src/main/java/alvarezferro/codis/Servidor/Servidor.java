@@ -1,16 +1,21 @@
 package alvarezferro.codis.Servidor;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+
+import javax.swing.JOptionPane;
 
 import alvarezferro.codis.Cliente.Cliente;
 import alvarezferro.codis.Servidor.BBDD.FachadaBaseDatos;
@@ -26,7 +31,18 @@ public class Servidor {
     static SignUpHandlerInterface nuestraReferencia;
     static Map<String, Usuario> Usuarios;
 
+    static FileWriter logWriter;
+
     public static void main(String[] args) {
+
+        try {
+            logWriter = new FileWriter("logServer.txt");
+        } catch(IOException err) {
+            JOptionPane.showMessageDialog(null, 
+                "Error al acceder al archivo log.txt\n"+
+                "\t"+err.getMessage()
+            );
+        }
 
         Usuarios = new HashMap<>();
 
@@ -59,25 +75,11 @@ public class Servidor {
         Scanner entrada = new Scanner(System.in);
         System.out.println("Servidor listo y emitiendo. Introduzca \"exit\" para salir.");
         
+        logMessage("Servidor iniciado.\n");
 
-        // BATERIA DE PRUEBAS
-        int codError; Set<String> res;
-        fbdd.inscribirUsuario("Joselito", "ABCD");
-        fbdd.inscribirUsuario("Manolita", "1234");
+        entrada.nextLine();
 
-        codError = fbdd.autenticarUsuario("Joselito", "ABCD");
-        codError = fbdd.autenticarUsuario("Joselite", "ABCD");
-        codError = fbdd.autenticarUsuario("Joselito", "SiYoSoyJoselito");
-
-        codError = fbdd.enviarSolicitudAmistad("Manolita", "Joselito");
-        res = fbdd.getAmigos("Manolita");
-        res = fbdd.getAmigos("Joselito");
-
-        codError = fbdd.aceptarSolicitudAmistad("Joselito", "Manolita");
-        res = fbdd.getAmigos("Manolita");
-        res = fbdd.getAmigos("Joselito");
-
-        // FIN BATERIA DE PRUEBAS
+        Set<String> test = getAmigos("Manolita");
 
         while(true) 
             if(entrada.nextLine().equals("exit")) {
@@ -88,6 +90,114 @@ public class Servidor {
 
         freeResources();
     }
+    // -----------------------------------------------------
+
+    // FUNCIONES DEL SISTEMA DE MENSAJERIA -----------------
+
+    protected static int autenticarUsuario(String userName, String password) {
+        logMessage("Autenticando usuario "+ userName +" con contraseña "+password);
+
+        return fbdd.autenticarUsuario(userName, password);
+
+    }
+
+    protected static int inscribirUsuario(String userName, String password) {
+        logMessage("Registrando usuario "+ userName +" con contraseña "+password);
+
+        return fbdd.inscribirUsuario(userName, password);
+    }
+
+    protected static int modificarContrasena(String userName, String newPassword) {
+        logMessage("Actualizando la contraseña del usuario "+ userName +" a "+newPassword);
+
+        return fbdd.modificarContrasena(userName, newPassword);
+    }
+
+    protected static void notificarInicioSesion(Usuario usuario) {
+        logMessage("Notificando el inicio de sesion de "+usuario.getUserName()+"...");
+        for(Usuario amigo : getAmigosEnLinea(usuario.getUserName())) {
+            try {
+                amigo.notificarInicioSesion(usuario);
+                logMessage("\t Notificacion enviada a "+amigo.getUserName());
+            } catch(RemoteException err) {
+                logMessage("Usuario "+amigo.getUserName()+" no accesible a la hora de notificar inicio de sesion.");
+            }
+        }
+    }
+
+    protected static void notificarCierreSesion(Usuario usuario) {
+        logMessage("Notificando el cierre de sesion de "+usuario.getUserName()+"...");
+        for(String amigo : getAmigos(usuario.getUserName())) {
+            try {
+                if(Usuarios.containsKey(amigo))            
+                Usuarios.get(amigo).notificarCierreSesion(usuario.getUserName());
+            } catch(RemoteException err) {
+                logMessage("Usuario "+amigo+" no accesible a la hora de notificar cierre de sesion.");
+            }
+        }
+
+        Usuarios.remove(usuario.getUserName());
+    }
+
+    protected static int enviarSolicitudAmistad(String solicitante, String destinatario) {
+        logMessage("Registrando solicitud de amistad de "+solicitante+" a "+destinatario);
+        Usuario usrDestinatario = Usuarios.get(destinatario);
+
+        if(usrDestinatario != null) { // Esta en linea en este momento.
+            try {
+                usrDestinatario.notificarSolicitudAmistad(solicitante);
+                return 0;
+            } catch(RemoteException err) {
+                logMessage("\tNo se ha podido notificar la solicitud:\n\t\t"+err.getMessage());
+            } // La ignoramos. Ya sera notificado la proxima vez que inicie sesión.
+        }         
+
+        return fbdd.enviarSolicitudAmistad(solicitante, destinatario);
+    }
+
+    protected static int aceptarSolicitudAmistad(String destinatario, String solicitante) {
+        logMessage("Registrando aceptacion de amistad de "+solicitante+" a "+destinatario);
+        int codError = fbdd.aceptarSolicitudAmistad(destinatario, solicitante);
+
+        if(codError != 0)
+            return codError;
+
+        Usuario usrSolicitante = Usuarios.get(solicitante);
+        Usuario usrDestinatario = Usuarios.get(destinatario);
+        if(usrSolicitante != null) {
+            try {
+                usrSolicitante.notificarSolicitudAceptada(destinatario);
+            } catch(RemoteException err) {
+                logMessage("\tNo se ha podido notificar la aceptacion:\n\t\t"+err.getMessage());
+            }
+        }
+
+        try {
+        if(usrSolicitante != null)
+            usrSolicitante.notificarInicioSesion(usrDestinatario);
+        if(usrDestinatario != null)
+            usrDestinatario.notificarInicioSesion(usrSolicitante);
+        } catch(RemoteException err) {}
+
+        return 0;
+    }
+
+    protected static MessageHandlerInterface iniciarChat(String solicitante, String interlocutor) {
+        logMessage("Inciando chat entre "+ solicitante +" con contraseña "+ interlocutor);
+        Usuario usrDestinatario = Usuarios.get(interlocutor);
+        if(usrDestinatario == null)
+            return null;
+
+        try {
+            return usrDestinatario.getReferencia().iniciarChat(solicitante);
+        } catch(RemoteException err) {
+            return null;
+        }
+    }
+    // ----------------------------------------------------
+
+
+    // FUNCIONES PROPRIAS ----------------------------------
 
     // Basicamente o mesmo proposito que a do exemplo do CV
     private static Registry startRegistry() {
@@ -105,106 +215,25 @@ public class Servidor {
 
     protected static void addUsuario(Usuario usuario) {
         Usuarios.put(usuario.getUserName(), usuario);
+
+        logMessage("Usuario "+usuario.getUserName()+" en linea.");
     }
 
-    protected static Set<String> getAmigos(Usuario usuario) {
-        return fbdd.getAmigos(usuario.getUserName());
+    protected static Set<String> getAmigos(String usuario) {
+        Set<String> amigos = fbdd.getAmigos(usuario);
+
+        return amigos;
     }
 
-    protected static Set<Usuario> getAmigosEnLinea(Usuario usuario) {
+    protected static Set<Usuario> getAmigosEnLinea(String usuario) {
         Set<Usuario> amigosEnLinea = new HashSet<>();
-        Set<String> amigos = fbdd.getAmigos(usuario.getUserName());
+        Set<String> amigos = getAmigos(usuario);
 
         for(String amigo : amigos)
             if(Usuarios.containsKey(amigo))
                 amigosEnLinea.add(Usuarios.get(amigo));        
 
         return amigosEnLinea;
-    }
-
-    protected static void notificarInicioSesion(Usuario usuario) {
-        for(String amigo : getAmigos(usuario)) {
-            try {
-                if(Usuarios.containsKey(amigo))            
-                    Usuarios.get(amigo).notificarInicioSesion(usuario);
-            } catch(RemoteException err) {
-                Cliente.logMessage("Usuario "+amigo+" no accesible a la hora de notificar inicio de sesion.\n");
-            }
-        }
-    }
-
-    protected static void notificarCierreSesion(Usuario usuario) {
-        for(String amigo : getAmigos(usuario)) {
-            try {
-                if(Usuarios.containsKey(amigo))            
-                Usuarios.get(amigo).notificarCierreSesion(usuario.getUserName());
-            } catch(RemoteException err) {
-                Cliente.logMessage("Usuario "+amigo+" no accesible a la hora de notificar cierre de sesion.\n");
-            }
-        }
-
-        Usuarios.remove(usuario.getUserName());
-    }
-
-    protected static int enviarSolicitudAmistad(String solicitante, String destinatario) {
-        Usuario usrDestinatario = Usuarios.get(destinatario);
-
-        if(usrDestinatario != null) { // Esta en linea en este momento.
-            try {
-                usrDestinatario.notificarSolicitudAmistad(solicitante);
-                return 0;
-            } catch(RemoteException err) {} // La ignoramos. Ya sera notificado la proxima vez que inicie sesión.
-        }         
-
-        return fbdd.enviarSolicitudAmistad(solicitante, destinatario);
-    }
-
-    protected static int aceptarSolicitudAmistad(String destinatario, String solicitante) {
-        int codError = fbdd.aceptarSolicitudAmistad(destinatario, solicitante);
-
-        if(codError != 0)
-            return codError;
-
-
-        Usuario usrSolicitante = Usuarios.get(solicitante);
-        Usuario usrDestinatario = Usuarios.get(destinatario);
-        if(usrSolicitante != null) {
-            try {
-                usrSolicitante.notificarSolicitudAceptada(destinatario);
-            } catch(RemoteException err) {}
-        }
-
-        try {
-        if(usrSolicitante != null)
-            usrSolicitante.notificarInicioSesion(usrDestinatario);
-        if(usrDestinatario != null)
-            usrDestinatario.notificarInicioSesion(usrSolicitante);
-        } catch(RemoteException err) {}
-
-        return 0;
-    }
-
-    protected static int autenticarUsuario(String userName, String password) {
-
-        return fbdd.autenticarUsuario(userName, password);
-
-    }
-
-    protected static int inscribirUsuario(String userName, String password) {
-
-        return inscribirUsuario(userName, password);
-    }
-
-    protected static MessageHandlerInterface iniciarChat(String destinatario, String remitente) {
-        Usuario usrDestinatario = Usuarios.get(destinatario);
-        if(usrDestinatario == null)
-            return null;
-
-        try {
-            return usrDestinatario.getReferencia().iniciarChat(remitente);
-        } catch(RemoteException err) {
-            return null;
-        }
     }
 
     private static void freeResources() {
@@ -223,5 +252,15 @@ public class Servidor {
         try {
             UnicastRemoteObject.unexportObject(registroRMI, false);
         } catch(RemoteException err) {}
+    }
+
+    public static void logMessage(String message) {
+        if(logWriter == null)
+            return;
+
+        try {
+            logWriter.write(message+"\n");
+            logWriter.flush();
+        } catch(IOException err) {} // Ignoramos.
     }
 }

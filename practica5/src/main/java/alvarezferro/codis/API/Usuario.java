@@ -1,8 +1,9 @@
 package alvarezferro.codis.API;
 
+import java.io.Serializable;
 import java.rmi.RemoteException;
 
-public class Usuario {
+public class Usuario implements Serializable {
     private String userName;
     private CallbackHandlerInterface referencia;
 

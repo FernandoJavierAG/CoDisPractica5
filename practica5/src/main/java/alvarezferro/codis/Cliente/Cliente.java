@@ -3,13 +3,18 @@ package alvarezferro.codis.Cliente;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Scanner;
+import java.util.Set;
 
 import javax.swing.JOptionPane;
 
+import alvarezferro.codis.API.MessageHandlerInterface;
 import alvarezferro.codis.API.Red;
 import alvarezferro.codis.API.SignUpHandlerInterface;
 import alvarezferro.codis.API.Usuario;
@@ -50,7 +55,7 @@ public class Cliente {
 
         SignUpHandlerInterface servidor;
         try {
-            Object ref = registroRMI.lookup(Red.NAME_SERVIDOR_OBJ);
+            Object ref = registroRMI.lookup("rmi://"+Red.IP_SERVIDOR+":"+Red.PUERTO_REGISTRO+"/"+Red.NAME_SERVIDOR_OBJ);
 
             if(! (ref instanceof SignUpHandlerInterface) ) {
                 throw new IllegalArgumentException("Objeto servidor es de la clase "+ref.getClass());
@@ -61,16 +66,68 @@ public class Cliente {
         } catch (RemoteException | NotBoundException | IllegalArgumentException err) {
             JOptionPane.showMessageDialog(null,
                 "Error al obtener el objeto servidor"+
-                        "\t"+err.getMessage());
+                        "\n\t"+err.getMessage());
             return;
         }
 
         amigos = new HashMap<>();
+
+        Scanner entrada = new Scanner(System.in);
+
+        System.out.print("Usuario:");String username= entrada.nextLine();
+        System.out.print("Contraseña:");String password= entrada.nextLine();
+        try {
+            nuestraReferencia = new CallbackHandler();
+        } catch(RemoteException err) {
+            System.out.println("Error al crear nuestra referencia");
+        }
+        int codErr;
+        try {
+            codErr = servidor.conectarCliente(username, password, nuestraReferencia);
+        } catch (RemoteException err) {
+            System.out.println("Error al conectar cliente:\n\t"+err.getMessage());
+            return;
+        }
+
+        logMessage("Sesion iniciada.\n");
+
+        System.out.println("Amigos: ");
+        for(Usuario amigo : amigos.values()) {
+            System.out.print(amigo.getUserName()+", ");
+        }
+        System.out.println();
+
+        System.out.println("Presione enter para enviar un mensaje.");
+        entrada.nextLine();
+
+        Collection<Usuario> test = amigos.values();
+
+        Usuario amigo1 = amigos.values().iterator().next();
         
-        new InicioSesion(servidor);
+        MessageHandlerInterface chatAmigo1;
+        try {
+            chatAmigo1 = servidor.iniciarChat(username, password, amigo1.getUserName());
+            if(chatAmigo1 == null)
+                throw new RemoteException("Amigo es nulo!");
+        } catch (RemoteException err) {
+            System.out.println("Error al solicitar un chat con "+amigo1.getUserName()+".\n\t"+err.getMessage());
+            return;
+        }
+
+        try {
+            System.out.println("Chat iniciado con "+chatAmigo1.getInterlocutor());
+            chatAmigo1.enviarMensaje("Hola amigo!!");
+        } catch(RemoteException err) {
+            System.out.println("Error al enviar mensaje.\n\t"+err.getMessage());
+        }
+
+
+        
+        //new InicioSesion(servidor);
     }
 
     public static void addAmigo(Usuario amigo) {
+        logMessage("Añadiendo amigo!");
         amigos.put(amigo.getUserName(), amigo);
     }
 
@@ -83,8 +140,13 @@ public class Cliente {
             return;
 
         try {
-            logWriter.write(message);
+            logWriter.write(message+"\n");
+            logWriter.flush();
         } catch(IOException err) {} // Ignoramos.
+    }
+
+    public static void recibirMensaje(String interlocutor, String mensaje) {
+        logMessage(interlocutor+" dice: "+mensaje);
     }
 
 }

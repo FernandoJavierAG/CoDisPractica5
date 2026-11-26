@@ -11,15 +11,18 @@ import alvarezferro.codis.Cliente.UI.VentanaChat;
 public class MessageHandler extends UnicastRemoteObject implements MessageHandlerInterface {
 
     private String interlocutor;
-    private VentanaChat ventana;
 
     public MessageHandler(String interlocutor) throws RemoteException{
         this.interlocutor = interlocutor;
     }
 
+    public String getInterlocutor() {
+        return this.interlocutor;
+    }
+
     public void enviarMensaje(String mensaje) {
 
-        ventana.recibirMensaje(interlocutor, mensaje);
+        Cliente.recibirMensaje(interlocutor, mensaje);
 
     }
     

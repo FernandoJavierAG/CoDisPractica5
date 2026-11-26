@@ -23,13 +23,13 @@ public class CallbackHandler extends UnicastRemoteObject implements CallbackHand
     public void notificarInicioSesion(Usuario usuario) {
         Cliente.addAmigo(usuario);
         
-        ventanaPrincipal.notificarInicioSesion(usuario.getUserName());   
+        //ventanaPrincipal.notificarInicioSesion(usuario.getUserName());   
     }
 
     public void notificarCierreSesion(String usuario) {
         Cliente.removeAmigo(usuario);
 
-        ventanaPrincipal.notificarCierreSesion(usuario);
+        //ventanaPrincipal.notificarCierreSesion(usuario);
     }
 
     public void notificarSolicitudAmistad(String usuario) {
@@ -40,12 +40,13 @@ public class CallbackHandler extends UnicastRemoteObject implements CallbackHand
 
     }
 
-    public void conectarAmigos(Usuario amigos) {
-
+    public void conectarAmigos(Usuario amigo) {
+        Cliente.addAmigo(amigo);
     }
 
     public void conectarAmigos(Set<Usuario> amigos) {
-
+        for(Usuario amigo : amigos)
+            Cliente.addAmigo(amigo);
     }
 
 

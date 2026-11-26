@@ -22,7 +22,7 @@ public class FachadaBaseDatos {
             
             String url = 
                     "jdbc:"+"postgresql"+"://"+
-                    "172.18.37.78:"+
+                    "172.18.21.101:"+
                     "5432/"+
                     "p2p"
                 ;
@@ -67,6 +67,31 @@ public class FachadaBaseDatos {
             try {
                 if(stmComprobacion!= null) stmComprobacion.close(); 
                 if(stmInscripcion!= null) stmInscripcion.close();
+            } catch (SQLException err){System.out.println("Imposible cerrar cursores");}
+        }
+
+        return codError;
+    }
+
+    public int modificarContrasena(String userName, String newPassword) {
+        int codError = 0;
+        PreparedStatement stmActualizacion = null;
+
+        try{
+            stmActualizacion=conexion.prepareStatement("update usuario set password = ? where nombre = ?");
+            stmActualizacion.setString(1, newPassword);
+            stmActualizacion.setString(2, userName);
+
+            conexion.commit();
+            
+        }catch(SQLException err){
+            System.out.println("Error al modificar la contraseña de un usuario:\n\t"+err.getMessage());
+            codError = 1;
+            tryRollback();
+
+        }finally{
+            try {
+                if(stmActualizacion!= null) stmActualizacion.close(); 
             } catch (SQLException err){System.out.println("Imposible cerrar cursores");}
         }
 
