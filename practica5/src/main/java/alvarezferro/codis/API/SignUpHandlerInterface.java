@@ -2,6 +2,11 @@ package alvarezferro.codis.API;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.sql.SQLException;
+
+import alvarezferro.codis.API.Excepciones.AuthException;
+import alvarezferro.codis.API.Excepciones.ForbiddenActionException;
+import alvarezferro.codis.API.Excepciones.ServerException;
 
 // Objeto remoto del Servidor, empleado en la comunicación con clientes.
 // Todas las funciones deben solicitar autenticación.
@@ -10,24 +15,31 @@ import java.rmi.RemoteException;
 public interface SignUpHandlerInterface extends Remote {
 
     // Función que llama un cliente para crear una cuenta en el servidor.
-    public int inscribirCliente(String userName, String password) throws RemoteException;
+    public void inscribirUsuario(String userName, String password) 
+        throws RemoteException, ServerException, ForbiddenActionException;
 
     // Funcion que llama un cliente para modificar su contraseña.
-    public int modificarContrasena(String userName, String oldPassword, String newPassword) throws RemoteException;
+    public void modificarContrasena(String userName, String oldPassword, String newPassword) 
+        throws RemoteException, ServerException, AuthException;
 
     // Funcion que llama un cliente para iniciar sesion en el servidor y pasar a estar en linea.
-    public int conectarCliente(String userName, String password, CallbackHandlerInterface cliente) throws RemoteException;
+    public void conectarCliente(String userName, String password, CallbackHandlerInterface cliente) 
+        throws RemoteException, ServerException, AuthException;
 
     // Funcion que llama un cliente para cerrar sesion en el servidor.
-    public int cerrarSesion(String userName, String password);
+    public void cerrarSesion(String userName, String password) 
+        throws RemoteException, ServerException, AuthException;
     
     // Funcion que llama un cliente para enviar una solicitud de amistad al usuario con nombre 'destinatario'.
-    public int enviarSolicitudAmistad(String userName, String password, String destinatario) throws RemoteException;
+    public void enviarSolicitudAmistad(String userName, String password, String destinatario) 
+        throws RemoteException, ServerException, AuthException, ForbiddenActionException;
 
     // Funcion que llama un cliente para aceptar una solicitud de amistad que le envió previamente el usuario 'solicitante'.
-    public int aceptarSolicitudAmistad(String userName, String password, String solicitante) throws RemoteException;
+    public void aceptarSolicitudAmistad(String userName, String password, String solicitante) 
+        throws RemoteException, ServerException, AuthException, ForbiddenActionException;
 
     // Funcion que llama un cliente para solicitar el inicio de un chat con 'interlocutor'
-    public MessageHandlerInterface iniciarChat(String userName, String password, String interlocutor) throws RemoteException;
+    public MessageHandlerInterface iniciarChat(String userName, String password, String interlocutor) 
+        throws RemoteException, ServerException, AuthException, ForbiddenActionException;
 
 }

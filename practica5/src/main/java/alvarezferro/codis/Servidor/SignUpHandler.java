@@ -8,32 +8,67 @@ import alvarezferro.codis.API.CallbackHandlerInterface;
 import alvarezferro.codis.API.MessageHandlerInterface;
 import alvarezferro.codis.API.SignUpHandlerInterface;
 import alvarezferro.codis.API.Usuario;
+import alvarezferro.codis.API.Excepciones.AuthException;
+import alvarezferro.codis.API.Excepciones.ForbiddenActionException;
+import alvarezferro.codis.API.Excepciones.ServerException;
+import alvarezferro.codis.Servidor.BBDD.FachadaBaseDatos;
 
 public class SignUpHandler extends UnicastRemoteObject implements SignUpHandlerInterface {
+    private FachadaBaseDatos fbdd;
 
-    public SignUpHandler() throws RemoteException {
-        super();
+    public SignUpHandler(FachadaBaseDatos fbdd) throws RemoteException {
+        this.fbdd = fbdd;
+    }
+
+    protected void autenticarUsuario(String userName, String password) 
+        throws ServerException, AuthException 
+    {
+        Servidor.logMessage("Autenticando usuario "+ userName +" con contraseña "+password);
+
+        fbdd.autenticarUsuario(userName, password);
+    }
+
+    protected Set<String> getAmigos(String usuario) 
+        throws ServerException 
+    {
+        return fbdd.getAmigos(usuario);
     }
     
-    public int conectarCliente(String userName, String password, CallbackHandlerInterface cliente) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, password);
+    public void inscribirUsuario(String userName, String password) 
+        throws ServerException, ForbiddenActionException
+    {
+        Servidor.logMessage("Registrando usuario "+ userName +" con contraseña "+password);
 
-        if(codError != 0) 
-            return codError;
+        fbdd.inscribirUsuario(userName, password);
+    }
+
+    public void modificarContrasena(String userName, String oldPassword, String newPassword)
+        throws ServerException, AuthException
+    {
+        autenticarUsuario(userName, newPassword);
+
+        Servidor.logMessage("Actualizando la contraseña del usuario "+ userName +" a "+newPassword);
+
+        fbdd.modificarContrasena(userName, newPassword);
+    }
+
+    public void conectarCliente(String userName, String password, CallbackHandlerInterface cliente) 
+        throws ServerException, AuthException
+    {
+        autenticarUsuario(userName, password);
 
         Usuario nuevoUsuario = new Usuario(userName, cliente);
         Servidor.addUsuario(nuevoUsuario);
-        Servidor.notificarInicioSesion(nuevoUsuario);
-        
-        Set<String> solicitudesPendientes = Servidor.getSolicitudesPendientes(userName);
+        Servidor.notificarInicioSesion(nuevoUsuario);        
+
+        Set<String> solicitudesPendientes = fbdd.getSolicitudesPendientes(userName);;
         for(String solicitante : solicitudesPendientes) {
             try {
                 nuevoUsuario.notificarSolicitudAmistad(solicitante);
             } catch(RemoteException err) {}
         }
 
-        Set<Usuario> amigos = Servidor.getAmigosEnLinea(nuevoUsuario.getUserName());
+        Set<Usuario> amigos = Servidor.getUsuarios(getAmigos(userName));
 
         for(int i = 1; i <= 3; i++) try {
             Servidor.logMessage("Conectando con los amigos de "+userName+"...");
@@ -46,66 +81,87 @@ public class SignUpHandler extends UnicastRemoteObject implements SignUpHandlerI
             else
                 Servidor.logMessage("No se pudo comunicar amistades a "+userName);
         }
-
-        return codError;
     }
 
-    public int cerrarSesion(String userName, String password) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, password);
-
-        if(codError != 0)
-            return codError;
+    public void cerrarSesion(String userName, String password) 
+        throws ServerException, AuthException
+    {
+        autenticarUsuario(userName, password);
 
         Servidor.notificarCierreSesion(userName);
 
         Servidor.removeUsuario(userName);
-
-        return codError;
     }
 
-    public int inscribirCliente(String userName, String password) {
-        return Servidor.inscribirUsuario(userName, password);
+    
+
+    public void enviarSolicitudAmistad(String userName, String password, String destinatario) 
+        throws ServerException, AuthException, ForbiddenActionException
+    {
+        autenticarUsuario(userName, password);
+
+        Servidor.logMessage("Registrando solicitud de amistad de "+userName+" a "+destinatario);
+
+        Usuario usrDestinatario = Servidor.getUsuario(destinatario);
+
+        if(usrDestinatario != null) { // Esta en linea en este momento.
+            try {
+                usrDestinatario.notificarSolicitudAmistad(userName);
+            } catch(RemoteException err) {
+                Servidor.logMessage("\tNo se ha podido notificar la solicitud:\n\t\t"+err.getMessage());
+            } // La ignoramos. Ya sera notificado la proxima vez que inicie sesión.
+        }         
+
+        fbdd.enviarSolicitudAmistad(userName, destinatario);
     }
 
-    public int modificarContrasena(String userName, String oldPassword, String newPassword) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, newPassword);
+    public void aceptarSolicitudAmistad(String userName, String password, String solicitante) 
+        throws ServerException, AuthException, ForbiddenActionException
+    {
+        autenticarUsuario(userName, password);
 
-        if(codError != 0)
-            return codError;
+        Servidor.logMessage("Registrando aceptacion de amistad de "+solicitante+" a "+userName);
+        
+        fbdd.aceptarSolicitudAmistad(userName, solicitante);
 
-        return Servidor.modificarContrasena(userName, newPassword);
+        Usuario usrSolicitante = Servidor.getUsuario(solicitante);
+        Usuario usrDestinatario = Servidor.getUsuario(userName);
+        if(usrSolicitante != null) {
+            try {
+                usrSolicitante.notificarSolicitudAceptada(userName);
+            } catch(RemoteException err) {
+                Servidor.logMessage("\tNo se ha podido notificar la aceptacion:\n\t\t"+err.getMessage());
+            }
+        }
+
+        try {
+        if(usrSolicitante != null)
+            usrSolicitante.notificarInicioSesion(usrDestinatario);
+        if(usrDestinatario != null)
+            usrDestinatario.notificarInicioSesion(usrSolicitante);
+        } catch(RemoteException err) {}        
     }
 
-    public int enviarSolicitudAmistad(String userName, String password, String destinatario) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, password);
+    public MessageHandlerInterface iniciarChat(String userName, String password, String interlocutor) 
+        throws ServerException, AuthException, ForbiddenActionException
+    {
+        autenticarUsuario(userName, password);
 
-        if(codError != 0)
-            return codError;
+        if(!getAmigos(userName).contains(interlocutor))
+            throw new ForbiddenActionException("El usuario con el que se desea iniciar un chat no es amigo del solicitante");
 
-        return Servidor.enviarSolicitudAmistad(userName, destinatario);
-    }
+        Servidor.logMessage("Inciando chat entre "+ userName +" con contraseña "+ interlocutor);
+        
 
-    public int aceptarSolicitudAmistad(String userName, String password, String solicitante) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, password);
-
-        if(codError != 0)
-            return codError;
-
-        return Servidor.aceptarSolicitudAmistad(userName, solicitante);
-    }
-
-    public MessageHandlerInterface iniciarChat(String userName, String password, String interlocutor) {
-        int codError;
-        codError = Servidor.autenticarUsuario(userName, password);
-
-        if(codError != 0)
+        Usuario usrInterlocutor = Servidor.getUsuario(interlocutor);
+        if(usrInterlocutor == null)
             return null;
 
-        return Servidor.iniciarChat(userName, interlocutor);
+        try {
+            return usrInterlocutor.getReferencia().iniciarChat(userName);
+        } catch(RemoteException err) {
+            return null;
+        }
     }
 
 }

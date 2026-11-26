@@ -19,6 +19,9 @@ import alvarezferro.codis.API.MessageHandlerInterface;
 import alvarezferro.codis.API.Red;
 import alvarezferro.codis.API.SignUpHandlerInterface;
 import alvarezferro.codis.API.Usuario;
+import alvarezferro.codis.API.Excepciones.AuthException;
+import alvarezferro.codis.API.Excepciones.ForbiddenActionException;
+import alvarezferro.codis.API.Excepciones.ServerException;
 import alvarezferro.codis.Cliente.UI.InicioSesion;
 import alvarezferro.codis.Cliente.UI.VentanaPrincipal;
 
@@ -82,12 +85,15 @@ public class Cliente {
         } catch(RemoteException err) {
             System.out.println("Error al crear nuestra referencia");
         }
-        int codErr;
+
+
         try {
-            codErr = servidor.conectarCliente(username, password, nuestraReferencia);
-        } catch (RemoteException err) {
+            servidor.conectarCliente(username, password, nuestraReferencia);
+        } catch (RemoteException | ServerException err) {
             System.out.println("Error al conectar cliente:\n\t"+err.getMessage());
             return;
+        } catch (AuthException err) {
+            System.out.println("Error de autenticación:\n\t"+err.getMessage());
         }
 
         logMessage("Sesion iniciada.\n");
@@ -110,13 +116,19 @@ public class Cliente {
             chatAmigo1 = servidor.iniciarChat(username, password, amigo1);
             if(chatAmigo1 == null)
                 throw new RemoteException("Amigo es nulo!");
-        } catch (RemoteException err) {
+        } catch (RemoteException | ServerException err) {
             System.out.println("Error al solicitar un chat con "+amigo1+".\n\t"+err.getMessage());
+            return;
+        } catch (AuthException err) {
+            System.out.println("Error de autenticacion:\n\t"+err.getMessage());
+            return;
+        } catch (ForbiddenActionException err) {
+            System.out.println("Accion no permitida:\n\t"+err.getMessage());
             return;
         }
 
         try {
-            System.out.println("Chat iniciado con "+chatAmigo1.getInterlocutor());
+            System.out.println("Chat iniciado con "+amigo1);
             chatAmigo1.enviarMensaje("Hola amigo!!");
         } catch(RemoteException err) {
             System.out.println("Error al enviar mensaje.\n\t"+err.getMessage());

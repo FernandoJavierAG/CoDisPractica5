@@ -32,7 +32,7 @@ public class InicioSesion extends JDialog {
             );
             return -2;
         }
-        
+        /* 
         try {
             servidor.conectarCliente(userName, password, cliente);            
             cliente.setVentanaPrincipal(new VentanaPrincipal(servidor, cliente));
@@ -44,7 +44,9 @@ public class InicioSesion extends JDialog {
             );
             return -1;
         }
+        */
         return 0;
+        
     }
 
 }
