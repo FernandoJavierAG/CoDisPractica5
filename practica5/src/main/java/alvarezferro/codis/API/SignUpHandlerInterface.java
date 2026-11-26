@@ -17,6 +17,9 @@ public interface SignUpHandlerInterface extends Remote {
 
     // Funcion que llama un cliente para iniciar sesion en el servidor y pasar a estar en linea.
     public int conectarCliente(String userName, String password, CallbackHandlerInterface cliente) throws RemoteException;
+
+    // Funcion que llama un cliente para cerrar sesion en el servidor.
+    public int cerrarSesion(String userName, String password);
     
     // Funcion que llama un cliente para enviar una solicitud de amistad al usuario con nombre 'destinatario'.
     public int enviarSolicitudAmistad(String userName, String password, String destinatario) throws RemoteException;
@@ -24,6 +27,7 @@ public interface SignUpHandlerInterface extends Remote {
     // Funcion que llama un cliente para aceptar una solicitud de amistad que le envió previamente el usuario 'solicitante'.
     public int aceptarSolicitudAmistad(String userName, String password, String solicitante) throws RemoteException;
 
+    // Funcion que llama un cliente para solicitar el inicio de un chat con 'interlocutor'
     public MessageHandlerInterface iniciarChat(String userName, String password, String interlocutor) throws RemoteException;
 
 }

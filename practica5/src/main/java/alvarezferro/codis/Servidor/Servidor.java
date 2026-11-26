@@ -125,18 +125,18 @@ public class Servidor {
         }
     }
 
-    protected static void notificarCierreSesion(Usuario usuario) {
-        logMessage("Notificando el cierre de sesion de "+usuario.getUserName()+"...");
-        for(String amigo : getAmigos(usuario.getUserName())) {
+    protected static void notificarCierreSesion(String usuario) {
+        logMessage("Notificando el cierre de sesion de "+usuario+"...");
+        for(String amigo : getAmigos(usuario)) {
             try {
                 if(Usuarios.containsKey(amigo))            
-                Usuarios.get(amigo).notificarCierreSesion(usuario.getUserName());
+                Usuarios.get(amigo).notificarCierreSesion(usuario);
             } catch(RemoteException err) {
                 logMessage("Usuario "+amigo+" no accesible a la hora de notificar cierre de sesion.");
             }
         }
 
-        Usuarios.remove(usuario.getUserName());
+        Usuarios.remove(usuario);
     }
 
     protected static int enviarSolicitudAmistad(String solicitante, String destinatario) {
@@ -146,7 +146,6 @@ public class Servidor {
         if(usrDestinatario != null) { // Esta en linea en este momento.
             try {
                 usrDestinatario.notificarSolicitudAmistad(solicitante);
-                return 0;
             } catch(RemoteException err) {
                 logMessage("\tNo se ha podido notificar la solicitud:\n\t\t"+err.getMessage());
             } // La ignoramos. Ya sera notificado la proxima vez que inicie sesión.
@@ -180,6 +179,10 @@ public class Servidor {
         } catch(RemoteException err) {}
 
         return 0;
+    }
+
+    protected static Set<String> getSolicitudesPendientes(String destinatario) {
+        return fbdd.getSolicitudesPendientes(destinatario);
     }
 
     protected static MessageHandlerInterface iniciarChat(String solicitante, String interlocutor) {
@@ -217,6 +220,10 @@ public class Servidor {
         Usuarios.put(usuario.getUserName(), usuario);
 
         logMessage("Usuario "+usuario.getUserName()+" en linea.");
+    }
+
+    protected static void removeUsuario(String usuario) {
+        Usuarios.remove(usuario);
     }
 
     protected static Set<String> getAmigos(String usuario) {

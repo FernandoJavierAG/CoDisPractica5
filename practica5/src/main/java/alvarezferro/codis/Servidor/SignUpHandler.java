@@ -25,6 +25,13 @@ public class SignUpHandler extends UnicastRemoteObject implements SignUpHandlerI
         Usuario nuevoUsuario = new Usuario(userName, cliente);
         Servidor.addUsuario(nuevoUsuario);
         Servidor.notificarInicioSesion(nuevoUsuario);
+        
+        Set<String> solicitudesPendientes = Servidor.getSolicitudesPendientes(userName);
+        for(String solicitante : solicitudesPendientes) {
+            try {
+                nuevoUsuario.notificarSolicitudAmistad(solicitante);
+            } catch(RemoteException err) {}
+        }
 
         Set<Usuario> amigos = Servidor.getAmigosEnLinea(nuevoUsuario.getUserName());
 
@@ -39,6 +46,20 @@ public class SignUpHandler extends UnicastRemoteObject implements SignUpHandlerI
             else
                 Servidor.logMessage("No se pudo comunicar amistades a "+userName);
         }
+
+        return codError;
+    }
+
+    public int cerrarSesion(String userName, String password) {
+        int codError;
+        codError = Servidor.autenticarUsuario(userName, password);
+
+        if(codError != 0)
+            return codError;
+
+        Servidor.notificarCierreSesion(userName);
+
+        Servidor.removeUsuario(userName);
 
         return codError;
     }

@@ -14,6 +14,7 @@ import java.util.Set;
 
 import javax.swing.JOptionPane;
 
+import alvarezferro.codis.API.CallbackHandlerInterface;
 import alvarezferro.codis.API.MessageHandlerInterface;
 import alvarezferro.codis.API.Red;
 import alvarezferro.codis.API.SignUpHandlerInterface;
@@ -23,7 +24,7 @@ import alvarezferro.codis.Cliente.UI.VentanaPrincipal;
 
 public class Cliente {
 
-    private static HashMap<String, Usuario> amigos;
+    private static HashMap<String, CallbackHandlerInterface> amigos;
 
     private static VentanaPrincipal ventana;
     private static CallbackHandler nuestraReferencia;
@@ -92,25 +93,25 @@ public class Cliente {
         logMessage("Sesion iniciada.\n");
 
         System.out.println("Amigos: ");
-        for(Usuario amigo : amigos.values()) {
-            System.out.print(amigo.getUserName()+", ");
+        for(String amigo : amigos.keySet()) {
+            System.out.print(amigo +", ");
         }
         System.out.println();
 
         System.out.println("Presione enter para enviar un mensaje.");
         entrada.nextLine();
 
-        Collection<Usuario> test = amigos.values();
+        Collection<String> test = amigos.keySet();
 
-        Usuario amigo1 = amigos.values().iterator().next();
+        String amigo1 = test.iterator().next();
         
         MessageHandlerInterface chatAmigo1;
         try {
-            chatAmigo1 = servidor.iniciarChat(username, password, amigo1.getUserName());
+            chatAmigo1 = servidor.iniciarChat(username, password, amigo1);
             if(chatAmigo1 == null)
                 throw new RemoteException("Amigo es nulo!");
         } catch (RemoteException err) {
-            System.out.println("Error al solicitar un chat con "+amigo1.getUserName()+".\n\t"+err.getMessage());
+            System.out.println("Error al solicitar un chat con "+amigo1+".\n\t"+err.getMessage());
             return;
         }
 
@@ -128,7 +129,7 @@ public class Cliente {
 
     public static void addAmigo(Usuario amigo) {
         logMessage("Añadiendo amigo!");
-        amigos.put(amigo.getUserName(), amigo);
+        amigos.put(amigo.getUserName(), amigo.getReferencia());
     }
 
     public static void removeAmigo(String amigo) {

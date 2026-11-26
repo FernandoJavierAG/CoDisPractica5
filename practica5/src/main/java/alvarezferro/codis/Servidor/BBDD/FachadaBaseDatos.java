@@ -153,7 +153,6 @@ public class FachadaBaseDatos {
     public int enviarSolicitudAmistad(String solicitante, String destinatario) {
         int codError = 0;
         PreparedStatement stmSolicitud=null;
-        ResultSet rsSolicitud;
         
         try{
             stmSolicitud=conexion.prepareStatement("insert into solicitud_amistad(solicitante, destinatario) values (?, ?)");
@@ -198,6 +197,8 @@ public class FachadaBaseDatos {
 
         // La solicitud existe. Lo convertimos en amistad.
         if(codError == 0) try {
+
+            // Pendiente: Comprobar si funciona bien sin esta linea, tras añadir la regla a la BDD
             stmEliminarSolicitud=conexion.prepareStatement("delete from solicitud_amistad where solicitante = ? and destinatario = ?");
             stmEliminarSolicitud.setString(1, solicitante);
             stmEliminarSolicitud.setString(2, destinatario);
@@ -225,6 +226,32 @@ public class FachadaBaseDatos {
         }
 
         return codError;
+    }
+
+    public Set<String> getSolicitudesPendientes(String destinatario) {
+        PreparedStatement stmSolicitudes=null;
+        ResultSet rsSolicitudes;
+        Set<String> resultado= new HashSet<String>();
+        
+        try{
+            stmSolicitudes=conexion.prepareStatement("select solicitante from solicitud_amistad where destinatario = ?");
+            stmSolicitudes.setString(1, destinatario);
+            rsSolicitudes=stmSolicitudes.executeQuery();
+            
+            while(rsSolicitudes.next()){
+                resultado.add(rsSolicitudes.getString("solicitante"));
+            }
+            
+        }catch(SQLException err){
+            System.out.println("Error al obtener solicitudes de amistad de la base de datos:\n\t"+err.getMessage());
+            resultado = null;
+
+        }finally{
+            try {stmSolicitudes.close();} catch (SQLException err){System.out.println("Imposible cerrar cursores");}
+        }
+        
+        return resultado;
+        
     }
 
     private void tryRollback() {
